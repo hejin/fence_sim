@@ -1,0 +1,6 @@
+
+How to install pyzmq in MS Windows host
+* install python 2.7 from binary release
+* get pip
+* use pip to instal zmq: pip.exe install zmq
+
