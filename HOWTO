@@ -8,6 +8,7 @@ How to setup
 * in VirtualBox host, e.g., MS Windows, launch the fence simulator
 	python fence_daemon.py
 * in Dual-head controllers (Virtualbox Guests), saying SPA & SPB, start the cluster
+* copy fence_apc_vbox and fencing_vbox.py to /usr/sbin/ in both controllers.
 * create fence device for SPA & SPB:
 	pcs stonith create apc_vbox  fence_apc_vbox pcmk_host_list="SPA"  ipaddr="192.168.56.1"  port=1
 	pcs stonith create apc_vbox2 fence_apc_vbox pcmk_host_list="SPB"  ipaddr="192.168.56.1"  port=2
