@@ -26,6 +26,9 @@ GALAXYIO_COPYRIGHT="Copyright (C) GalaxyIO Technologies Co., Ltd. 2013-2014 All 
 #END_VERSION_GENERATION
 
 class apc_vbox_conn():
+    def __init__(self):
+        # FIXME: will be dropped later
+        self.power_state = "off"
 
     def start(self, ipaddr, port):
         try:
@@ -38,6 +41,12 @@ class apc_vbox_conn():
 
     def stop(self):
             self.ctxt.destroy()
+
+    def set_power_status(self, state_str):
+            self.power_state = state_str
+
+    def get_power_status(self):
+            return self.power_state
 
 def fence_login2(options):
         try:
@@ -59,21 +68,40 @@ def fence_logout(conn):
             pass
 
 def get_power_status(conn, options):
-            return "on"            
+            return conn.get_power_status()
 
 def set_power_status(conn, options):
+        action = {
+               'on' : "1",
+               'off': "2"
+        }[options["--action"]]
+        
+        if (action == "1"):
+            conn.set_power_status("on")
+            return "on"
+        elif (action == "2"):
+            conn.set_power_status("off")
+            return "off"
+        else:
+            syslog.syslog(syslog.LOG_NOTICE, "Unknown action: " + options["--action"])
+
         return
+
+def wait_power_status2(tn, options):
+	for dummy in xrange(int(options["--power-timeout"])):
+		if get_power_status(tn, options) != options["--action"]:
+			time.sleep(1)
+		else:
+			return 1
+	return 0
 
 def fence_action2(tn, options, set_power_fn, get_power_fn, get_outlet_list = None):
         result = 0
-
+	syslog.syslog(syslog.LOG_INFO, "Tgt Plug:" + options["--plug"])
 	try:
 		## Process options that manipulate fencing device
 		#####
 		if (options["--action"] == "list"):
-			## @todo: exception?
-			## This is just temporal solution, we will remove default value
-			## None as soon as all existing agent will support this operation 
 			print "NOTICE: List option is not working on this device yet"
 			return
 
@@ -86,12 +114,10 @@ def fence_action2(tn, options, set_power_fn, get_power_fn, get_outlet_list = Non
 				print "Success: Already ON"
 			else:
 				power_on = False
-				for _ in range(1, 1 + int(options["--retry-on"])):
-					set_multi_power_fn(tn, options, set_power_fn)
-					time.sleep(int(options["--power-wait"]))
-					if wait_power_status(tn, options, get_power_fn):
-						power_on = True
-						break
+				set_power_status(tn, options)
+				time.sleep(int(options["--power-wait"]))
+				if wait_power_status2(tn, options):
+					power_on = True
 
 				if power_on:
 					print "Success: Powered ON"
@@ -101,30 +127,28 @@ def fence_action2(tn, options, set_power_fn, get_power_fn, get_outlet_list = Non
 			if status == "off":
 				print "Success: Already OFF"
 			else:
-				set_multi_power_fn(tn, options, set_power_fn)
+				set_power_status(tn, options)
 				time.sleep(int(options["--power-wait"]))
-				if wait_power_status(tn, options, get_power_fn):
+				if wait_power_status2(tn, options, get_power_fn):
 					print "Success: Powered OFF"
 				else:
 					fail(EC_WAITING_OFF)
 		elif options["--action"] == "reboot":
                         syslog.syslog(syslog.LOG_INFO, "action: reboot")
-                        print("Success: Rebooted")
-                        return result
 			if status != "off":
 				options["--action"] = "off"
-				set_multi_power_fn(tn, options, set_power_fn)
+				set_power_status(tn, options)
 				time.sleep(int(options["--power-wait"]))
-				if wait_power_status(tn, options, get_power_fn) == 0:
+				if wait_power_status2(tn, options) == 0:
 					fail(EC_WAITING_OFF)
 			options["--action"] = "on"
 
 			power_on = False
 			try:
 				for _ in range(1, 1 + int(options["--retry-on"])):
-					set_multi_power_fn(tn, options, set_power_fn)
+					set_power_status(tn, options)
 					time.sleep(int(options["--power-wait"]))
-					if wait_power_status(tn, options, get_power_fn) == 1:
+					if wait_power_status2(tn, options) == 1:
 						power_on = True
 						break
 			except Exception, ex:
