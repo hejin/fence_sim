@@ -42,10 +42,15 @@ class apc_vbox_conn():
     def stop(self):
             self.ctxt.destroy()
 
-    def set_power_status(self, state_str):
-            self.power_state = state_str
+    def set_power_status(self, ops_str, plug_num):
+            self.sock.send(ops_str + ' ' + str(plug_num), copy=True)
+            self.power_state = self.sock.recv()
 
-    def get_power_status(self):
+    def get_power_status(self, plug_num):
+            # send request and wait response
+            # return value: "on" | "off" | "NA"
+            self.sock.send('GetPowerState ' + str(plug_num), copy=True)
+            self.power_state = self.sock.recv()
             return self.power_state
 
 def fence_login2(options):
@@ -68,7 +73,7 @@ def fence_logout(conn):
             pass
 
 def get_power_status(conn, options):
-            return conn.get_power_status()
+            return conn.get_power_status(options["--plug"])
 
 def set_power_status(conn, options):
         action = {
@@ -77,10 +82,10 @@ def set_power_status(conn, options):
         }[options["--action"]]
         
         if (action == "1"):
-            conn.set_power_status("on")
+            conn.set_power_status("on", options["--plug"])
             return "on"
         elif (action == "2"):
-            conn.set_power_status("off")
+            conn.set_power_status("off", options["--plug"])
             return "off"
         else:
             syslog.syslog(syslog.LOG_NOTICE, "Unknown action: " + options["--action"])
@@ -129,7 +134,7 @@ def fence_action2(tn, options, set_power_fn, get_power_fn, get_outlet_list = Non
 			else:
 				set_power_status(tn, options)
 				time.sleep(int(options["--power-wait"]))
-				if wait_power_status2(tn, options, get_power_fn):
+				if wait_power_status2(tn, options):
 					print "Success: Powered OFF"
 				else:
 					fail(EC_WAITING_OFF)
@@ -200,9 +205,9 @@ will block any necessary fencing actions."
 	show_docs(options, docs)
 	conn = fence_login2(options)
         syslog.syslog(syslog.LOG_INFO, "login done")
-        fence_logout(conn)
 	result = -1
 	result = fence_action2(conn, options, set_power_status, get_power_status, get_power_status)
+        fence_logout(conn)
 	sys.exit(result)
 
 
