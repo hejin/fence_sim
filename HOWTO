@@ -4,3 +4,22 @@ How to install pyzmq in MS Windows host
 * get pip
 * use pip to instal zmq: pip.exe install zmq
 
+How to setup
+* in VirtualBox host, e.g., MS Windows, launch the fence simulator
+	python fence_daemon.py
+* in Dual-head controllers (Virtualbox Guests), saying SPA & SPB, start the cluster
+* create fence device for SPA & SPB:
+	pcs stonith create apc_vbox  fence_apc_vbox pcmk_host_list="SPA"  ipaddr="192.168.56.1"  port=1
+	pcs stonith create apc_vbox2 fence_apc_vbox pcmk_host_list="SPB"  ipaddr="192.168.56.1"  port=2
+* check fence devices if running
+	pcs stonith show
+* fence off SPB from SPA
+	pcs stonith fence SPB --off
+* reboot SPB from SPA
+	pcs stonith fence SPB
+* vice versa
+
+Misc:
+* check the fence simualtor w/o Pacemaker
+./fence_apc_vbox --ip=192.168.56.1 --ipport=5556  --plug=1 --action=on
+./fence_apc_vbox --ip=192.168.56.1 --ipport=5556  --plug=2 --action=off
