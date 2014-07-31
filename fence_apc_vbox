@@ -103,13 +103,13 @@ def wait_power_status2(tn, options):
 
 def fence_action(tn, options, set_power_fn, get_power_fn, get_outlet_list = None):
         result = 0
-	syslog.syslog(syslog.LOG_INFO, "Tgt Plug:" + options["--plug"])
+	#syslog.syslog(syslog.LOG_INFO, "Tgt Plug:" + options["--plug"])
 	try:
 		## Process options that manipulate fencing device
 		#####
 		if (options["--action"] == "list"):
 			print "NOTICE: List option is not working on this device yet"
-			return
+			return 0
 
 		status = get_power_status(tn, options)
 		if status != "on" and status != "off":  
@@ -175,6 +175,7 @@ def fence_action(tn, options, set_power_fn, get_power_fn, get_outlet_list = None
 			if status.upper() == "OFF":
 				result = 2
 		elif options["--action"] == "monitor":
+			result = 0
 			pass
 	except pexpect.EOF:
 		fail(EC_CONNECTION_LOST)
@@ -204,6 +205,7 @@ should be avoided while a GFS cluster  is  running  because  the  connection \
 will block any necessary fencing actions."
 	docs["vendorurl"] = "http://www.galaxyio.com"
 	show_docs(options, docs)
+	syslog.syslog(syslog.LOG_INFO, str(options))
 	conn = fence_login(options)
         syslog.syslog(syslog.LOG_INFO, "login done")
 	result = -1

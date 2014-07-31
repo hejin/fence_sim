@@ -80,7 +80,7 @@ all_opt = {
 		"getopt" : "o:",
 		"longopt" : "action",
 		"help" : "-o, --action=[action]          Action: status, reboot (default), off or on",
-		"required" : "1",
+		"required" : "0",
 		"shortdesc" : "Fencing Action",
 		"default" : "reboot",
 		"order" : 1 },
@@ -100,6 +100,7 @@ all_opt = {
 		"longopt" : "ipport",
 		"help" : "-u, --ipport=[port]            TCP/UDP port to use",
 		"required" : "0",
+		"default" : "5556",
 		"shortdesc" : "TCP/UDP port to use for connection with device",
 		"order" : 1 },		
 	"login" : {
@@ -207,9 +208,17 @@ all_opt = {
 		"longopt" : "plug",
 		"help" : "-n, --plug=[id]                Physical plug number on device, UUID or\n" + 
         "                                        identification of machine",
-		"required" : "1",
+		"required" : "0",
 		"shortdesc" : "Physical plug number, name of virtual machine or UUID",
 		"order" : 1 },
+	"nodename" : {
+		"getopt" : "N:",
+		"longopt" : "nodename",
+		"help" : "-n, --nodename=[nodeid]         Physical node ID",
+		"required" : "0",
+		"shortdesc" : "Physical node ID to operate",
+		"order" : 1 },
+
 	"switch" : {
 		"getopt" : "s:",
 		"longopt" : "switch",
@@ -377,7 +386,7 @@ all_opt = {
 DEPENDENCY_OPT = {
 		"default" : [ "help", "debug", "verbose", "version", "action", "agent", \
 			"power_timeout", "shell_timeout", "login_timeout", "power_wait", "retry_on", "delay", \
-                        "no_login" ],
+                        "no_login", "nodename" ],
 		"passwd" : [ "passwd_script" ],
 		"secure" : [ "identity_file", "ssh_options" ],
 		"ipaddr" : [ "ipport", "inet4_only", "inet6_only" ],
