@@ -58,6 +58,105 @@ def fence_logout(conn):
             syslog.syslog(syslog.LOG_NOTICE, str(ex))
             pass
 
+def get_power_status(conn, options):
+            return "on"            
+
+def set_power_status(conn, options):
+        return
+
+def fence_action2(tn, options, set_power_fn, get_power_fn, get_outlet_list = None):
+        result = 0
+
+	try:
+		## Process options that manipulate fencing device
+		#####
+		if (options["--action"] == "list"):
+			## @todo: exception?
+			## This is just temporal solution, we will remove default value
+			## None as soon as all existing agent will support this operation 
+			print "NOTICE: List option is not working on this device yet"
+			return
+
+		status = get_power_status(tn, options)
+		if status != "on" and status != "off":  
+			fail(EC_STATUS)
+
+		if options["--action"] == "on":
+			if status == "on":
+				print "Success: Already ON"
+			else:
+				power_on = False
+				for _ in range(1, 1 + int(options["--retry-on"])):
+					set_multi_power_fn(tn, options, set_power_fn)
+					time.sleep(int(options["--power-wait"]))
+					if wait_power_status(tn, options, get_power_fn):
+						power_on = True
+						break
+
+				if power_on:
+					print "Success: Powered ON"
+				else:
+					fail(EC_WAITING_ON)
+		elif options["--action"] == "off":
+			if status == "off":
+				print "Success: Already OFF"
+			else:
+				set_multi_power_fn(tn, options, set_power_fn)
+				time.sleep(int(options["--power-wait"]))
+				if wait_power_status(tn, options, get_power_fn):
+					print "Success: Powered OFF"
+				else:
+					fail(EC_WAITING_OFF)
+		elif options["--action"] == "reboot":
+                        syslog.syslog(syslog.LOG_INFO, "action: reboot")
+                        print("Success: Rebooted")
+                        return result
+			if status != "off":
+				options["--action"] = "off"
+				set_multi_power_fn(tn, options, set_power_fn)
+				time.sleep(int(options["--power-wait"]))
+				if wait_power_status(tn, options, get_power_fn) == 0:
+					fail(EC_WAITING_OFF)
+			options["--action"] = "on"
+
+			power_on = False
+			try:
+				for _ in range(1, 1 + int(options["--retry-on"])):
+					set_multi_power_fn(tn, options, set_power_fn)
+					time.sleep(int(options["--power-wait"]))
+					if wait_power_status(tn, options, get_power_fn) == 1:
+						power_on = True
+						break
+			except Exception, ex:
+				# an error occured during power ON phase in reboot
+				# fence action was completed succesfully even in that case
+				sys.stderr.write(str(ex))
+				syslog.syslog(syslog.LOG_NOTICE, str(ex))
+				pass
+
+			if power_on == False:
+				# this should not fail as node was fenced succesfully
+				sys.stderr.write('Timed out waiting to power ON\n')
+				syslog.syslog(syslog.LOG_NOTICE, "Timed out waiting to power ON")
+
+			print "Success: Rebooted"
+		elif options["--action"] == "status":
+			print "Status: " + status.upper()
+			if status.upper() == "OFF":
+				result = 2
+		elif options["--action"] == "monitor":
+			pass
+	except pexpect.EOF:
+		fail(EC_CONNECTION_LOST)
+	except pexpect.TIMEOUT:
+		fail(EC_TIMED_OUT)
+	except pycurl.error, ex:
+		sys.stderr.write(ex[1] + "\n")
+		syslog.syslog(syslog.LOG_ERR, ex[1])
+		fail(EC_TIMED_OUT)
+	
+	return result
+
 #########################################################################
 
 def main():
@@ -79,7 +178,7 @@ will block any necessary fencing actions."
         syslog.syslog(syslog.LOG_INFO, "login done")
         fence_logout(conn)
 	result = -1
-	#result = fence_action(conn, options, set_power_status, get_power_status, get_power_status)
+	result = fence_action2(conn, options, set_power_status, get_power_status, get_power_status)
 	sys.exit(result)
 
 
