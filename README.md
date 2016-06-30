@@ -10,3 +10,4 @@ Howto
 N.B.
 * In the host side, the path to the VBoxManage utilit is hardcoded in fence_daemon.py
 * In the client side, the host IP is hardcoded in fence_req.py
+
